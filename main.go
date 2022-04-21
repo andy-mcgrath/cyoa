@@ -17,80 +17,63 @@ type (
 	}
 	Option struct {
 		Text string `json:"text"`
-		Arc  string  `json:"arc"`
+		Arc  string `json:"arc"`
 	}
 )
 
-const (
-  pageTemplate = `
-<!doctype html>
-<html>
-  <head>
-    <title>{{.Title}}</title>
-    <meta name="description" content="Our first page">
-    <meta name="keywords" content="html tutorial template">
-  </head>
-  <body>
-    <h1>{{.Title}}</h1>
-    {{range .Story}}
-    <p>.</p>
-    <br>
-    {{end}}
-    {{range .Options}}
-    <a href="/{{.Arc}}" >{{.Text}}</a>
-    {{end}}
-  </body>
-</html>
-`
-)
-
-func (p Page) print() {
-  fmt.Printf("Title: %s\n\nStory:\n  ", p.Title)
-  for _, v := range p.Story {
-    fmt.Printf("%s\n", v)
-  }
-  fmt.Println()
-
-  for _, v := range p.Options {
-    fmt.Printf("%s ** %s **\n", v.Text ,v.Arc)
-  }
-}
-
-func MapHandler(pages map[string]Page, tmpl *template.Template, fallback http.Handler) http.HandlerFunc {
-
+func mapHandler(pages map[string]Page, tmpl *template.Template, fallback http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    path := strings.Replace(r.URL.Path, "/", "", 1)
+		path := strings.Replace(r.URL.Path, "/", "", 1)
+
 		if page, ok := pages[path]; ok {
 			tmpl.Execute(w, page)
 			return
 		}
 
 		fallback.ServeHTTP(w, r)
+		return
 	})
 }
 
+func loadStory(filePath string) (pages map[string]Page, err error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(data, &pages)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func defaultMux() *http.ServeMux {
+	assetsFs := http.FileServer(http.Dir("web/assets"))
+	imagesFs := http.FileServer(http.Dir("web/images"))
+	mux := http.NewServeMux()
+	mux.Handle("/assets/", http.StripPrefix("/assets/", assetsFs))
+	mux.Handle("/images/", http.StripPrefix("/images/", imagesFs))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/intro", http.StatusPermanentRedirect)
+	})
+	return mux
+}
+
 func main() {
-  pages := map[string]Page{}
-  file := "gopher.json"
+	storyFile := "web/stories/gopher.json"
+	tmplFile := "web/template/index.gotmpl"
 
-  data, err := os.ReadFile(file)
-  if err != nil {
-    panic(err)
-  }
-  err = json.Unmarshal(data, &pages)
-  if err != nil {
-    panic(err)
-  }
+	pages, err := loadStory(storyFile)
+	if err != nil {
+		panic(err)
+	}
 
-  tmpl := template.Must(template.ParseFiles("page.html"))
+	tmpl := template.Must(template.ParseFiles(tmplFile))
 
-  mux := http.NewServeMux()
-  mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
-    http.Redirect(w, r, "/intro", http.StatusPermanentRedirect)
-  })
+	mux := defaultMux()
 
-  storyHandler := MapHandler(pages, tmpl, mux)
+	storyHandler := mapHandler(pages, tmpl, mux)
 
-  fmt.Println("Web Server running on http://localhost:8080/intro")
-  http.ListenAndServe(":8080", storyHandler)
+	fmt.Println("Web Server running on http://localhost:8080/")
+	http.ListenAndServe(":8080", storyHandler)
 }

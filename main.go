@@ -54,7 +54,11 @@ func defaultMux() *http.ServeMux {
 	mux.Handle("/assets/", http.StripPrefix("/assets/", assetsFs))
 	mux.Handle("/images/", http.StripPrefix("/images/", imagesFs))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/intro", http.StatusPermanentRedirect)
+		if r.URL.Path == "/" {
+			http.Redirect(w, r, "/intro", http.StatusPermanentRedirect)
+			return
+		}
+		http.NotFound(w, r)
 	})
 	return mux
 }

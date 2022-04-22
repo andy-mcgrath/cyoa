@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -64,6 +65,12 @@ func defaultMux() *http.ServeMux {
 }
 
 func main() {
+	port := os.Getenv("PORT")
+
+	if port == "" {
+			log.Fatal("$PORT must be set")
+	}
+
 	storyFile := "web/stories/gopher.json"
 	tmplFile := "web/template/index.gotmpl"
 
@@ -78,6 +85,6 @@ func main() {
 
 	storyHandler := mapHandler(pages, tmpl, mux)
 
-	fmt.Println("Web Server running on http://localhost:8080/")
-	http.ListenAndServe(":8080", storyHandler)
+	fmt.Printf("Web Server running on http://localhost:%s/\n", port)
+	http.ListenAndServe(":" + port, storyHandler)
 }

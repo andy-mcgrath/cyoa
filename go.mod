@@ -4,7 +4,9 @@ module github.com/andy-mcgrath/cyoa
 
 go 1.18
 
+require github.com/go-redis/redis/v8 v8.11.5
+
 require (
-	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
-	github.com/gophercises/cyoa v0.0.0-20190722125433-070143bf424e
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 )

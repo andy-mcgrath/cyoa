@@ -44,6 +44,6 @@ docker_build_with_restart(
 k8s_yaml('deployment/kubernetes.yaml')
 k8s_resource(
   'go-webstory',
-  port_forwards=8080,
+  port_forwards=3000,
   resource_deps=['go-compile'],
 )

@@ -27,18 +27,13 @@ type (
 	}
 )
 
-var (
-	stories []string
-	pages map[string]Page
-)
-
 func isStory(ctx context.Context, rdb *redis.Client, story string) bool {
-	ctxTimeout, cancel := context.WithTimeout(ctx, time.Second * 5)
+	ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
 	s, err := rdb.SMIsMember(ctxTimeout, "stories", story).Result()
 	if err != nil {
-		fmt.Printf("redis SMIsMember 'stories', '%s' failed: %s\n", story, err.Error())
+		log.Printf("redis SMIsMember 'stories', '%s' failed: %s\n", story, err.Error())
 		return false
 	}
 
@@ -70,15 +65,14 @@ func redisMapHandler(ctx context.Context, rdb *redis.Client, tmpl *template.Temp
 			return
 		}
 
-
-		ctxTimeout, cancel := context.WithTimeout(ctx, time.Second * 5)
+		ctxTimeout, cancel := context.WithTimeout(ctx, time.Second*5)
 		defer cancel()
 
 		key := fmt.Sprintf("%s:%s", story, page)
 
 		rGet, err := rdb.Get(ctxTimeout, key).Result()
 		if err != nil {
-			fmt.Printf("redis get '%s' failed: %s\n", key, err.Error())
+			log.Printf("redis get '%s' failed: %s\n", key, err.Error())
 			fallback.ServeHTTP(w, r)
 			return
 		}
@@ -86,7 +80,7 @@ func redisMapHandler(ctx context.Context, rdb *redis.Client, tmpl *template.Temp
 		p := Page{}
 		err = json.Unmarshal([]byte(rGet), &p)
 		if err != nil {
-			fmt.Printf("json unmarshal failed: %s", err.Error())
+			log.Printf("json unmarshal failed: %s", err.Error())
 			http.NotFound(w, r)
 			return
 		}
@@ -95,10 +89,8 @@ func redisMapHandler(ctx context.Context, rdb *redis.Client, tmpl *template.Temp
 
 		err = tmpl.Execute(w, p)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
-
-		return
 	})
 }
 
@@ -139,7 +131,7 @@ func main() {
 	port := os.Getenv("PORT")
 
 	if port == "" {
-		port = "3000"
+		port = "8080"
 	}
 
 	tmplFile := "web/template/index.gotmpl"
@@ -150,15 +142,14 @@ func main() {
 
 	storyHandler := redisMapHandler(ctx, rdb, tmpl, mux)
 
-	fmt.Printf("Web Server running on http://localhost:%s/\n", port)
-	http.ListenAndServe(":" + port, storyHandler)
+	log.Printf("Web Server running on http://localhost:%s/\n", port)
+	http.ListenAndServe(":"+port, storyHandler)
 }
-
 
 func newRedisClient(ctx context.Context) (*redis.Client, error) {
 	opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
 	if err != nil {
-		return nil, fmt.Errorf("redis parse url failed: %w",err)
+		return nil, fmt.Errorf("redis parse url failed: %w", err)
 	}
 
 	c := redis.NewClient(opt)
